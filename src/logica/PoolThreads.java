@@ -1,19 +1,26 @@
-package tcpserver;
+package logica;
+
 import java.io.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class PoolThreads 
 {
-	private ServerSocket ss;
+	public static final int PORT = 8080;
+	
+	private DatagramSocket ss;
 	private static int nThreads;
 	private static Integer nThreadsActivos = 0;
-	private static int tiempoMuerte = 0;
 	private String archivo;
 	private static Integer numeroSesiones=0;
 	private static Boolean iniciaConcurrencia;
+	private String[] hilos;
+	private HashMap<String, Protocol> referencias;
 
 	public String listarArchivos()
 	{
@@ -22,12 +29,15 @@ public class PoolThreads
 		String[] nombres = directorio.list();
 		for(int i = 0; i < nombres.length; i++)
 		{
-			if(i == nombres.length-1)
+//			if(i == nombres.length-1)
+			File f = new File(nombres[i]);
+			if(!f.isDirectory())
 			{
 				retorno += (i+1) + ") " + nombres[i];
-				break;
+				
 			}
-			retorno += (i+1) + ") " + nombres[i] + "\n";
+			else
+				retorno += (i+1) + ") " + nombres[i] + "\n";
 		}
 		return retorno;
 	}
@@ -60,33 +70,23 @@ public class PoolThreads
 			nThreads = num;
 			break;
 		}
-		while(true)
-		{
-			System.out.println("Ingrese el numero de timeout de las peticiones del cliente en segundos, MAX 10 SEGUNDOS");
-			int muerte = Integer.parseInt(br.readLine());
-			if(muerte < 0 || muerte > 10)
-			{
-				System.err.println("Ingrese un tiempo valido");
-				continue;
-			}
-			tiempoMuerte = muerte;
-			break;
-		}
 	}
 
-	public void servidor() throws IOException, InterruptedException
+	public void servidor() throws Exception
 	{
 		InputStreamReader isr = new InputStreamReader(System.in);
 		BufferedReader br = new BufferedReader(isr);
-		int ip = 8080;
-		System.out.println("Empezando servidor maestro en puerto " + ip);
+		System.out.println("Empezando servidor maestro en puerto " + PORT);
 
 		// Crea el socket que escucha en el puerto seleccionado.
-		ss = new ServerSocket(ip);
+		ss = new DatagramSocket(PORT);
 		System.out.println("Socket creado.");
 
 		seleccion(br);
 
+		referencias = new HashMap<>();
+		hilos = new String[nThreads];
+		for(int i = 0; i < hilos.length; i++) { hilos[i] = ""; }
 		ExecutorService executor= Executors.newFixedThreadPool(nThreads);
 		System.out.println("Pool con "+nThreads+" threads ha sido creado.");
 		System.out.println("Esperando solicitudes.");
@@ -97,12 +97,29 @@ public class PoolThreads
 			{ 
 				if(numeroSesiones <= 25)
 				{
-					Socket sc = ss.accept();
-					numeroSesiones++;
-//					boolean aceptaArchs = false;
-//					seAceptan(aceptaArchs);
-					boolean aceptaArchs = seAceptan(true);
-					executor.execute(new Protocol(sc, aceptaArchs, tiempoMuerte, archivo, this));
+					// Recibe el paquete de listo del cliente
+					byte[] buf = new byte[9];
+					DatagramPacket p = new DatagramPacket(buf, buf.length);
+					ss.receive(p);
+					String recibida = new String(p.getData(), 0, p.getLength());
+					if(recibida.equals(Protocol.PREPARADO)) {
+						boolean aceptaArchs = seAceptan(true);
+						Protocol pro = new Protocol(aceptaArchs, archivo, this, p.getAddress(), p.getPort(), numeroSesiones);
+						referencias.put((p.getAddress().toString() + p.getPort()), pro);
+						executor.execute(pro);
+						numeroSesiones++;						
+					}
+					else if(recibida.equals(Protocol.RECIBIDO) || recibida.equals(Protocol.ERROR)) {
+						// Buscar el de todos que tiene el id o algo y hacer que se despierte del while o algo en el que se va a dejar
+						Protocol s = referencias.get((p.getAddress().toString() + p.getPort()));
+						if(s != null) {
+							s.setEstado(recibida);
+							referencias.remove((p.getAddress().toString() + p.getPort()));
+						}
+						else {
+							throw new Exception("Algo ocurrió y llegó un paquete de un cliente que no tiene delegado asignado!");
+						}
+					}
 				}
 				else
 				{
@@ -116,34 +133,7 @@ public class PoolThreads
 		}
 	}
 	
-//	public boolean seAceptan(boolean aceptan)
-//	{
-//		synchronized (nThreadsActivos) 
-//		{
-//			synchronized (iniciaConcurrencia) 
-//			{
-//				if(iniciaConcurrencia == false)
-//				{
-//					iniciaConcurrencia = true;
-//					nThreadsActivos++;
-//					aceptan = true;
-//				}
-//				else
-//				{
-//					if(nThreadsActivos < nThreads)
-//					{
-//						aceptan = true;
-//						nThreadsActivos++;
-//					}
-//					else
-//					{
-//						aceptan = false;
-//					}
-//				}
-//				return aceptan;
-//			}
-//		}
-//	}
+	
 	public boolean seAceptan(boolean primeraVez)
 	{
 		boolean aceptan = false;
@@ -176,7 +166,7 @@ public class PoolThreads
 					{
 						aceptan = false;
 					}
-//					ESTO SOBRA SI ES AS� CON RETURN
+//					ESTO SOBRA SI ES AS� CON RETURN
 //					else
 //					{
 //						aceptan = false;
@@ -218,6 +208,14 @@ public class PoolThreads
 		if(numeroSesiones > 25) {
 			notify();
 		}
+	}
+	
+	public void enviar(DatagramPacket paq) throws IOException {
+		ss.send(paq);
+	}
+	
+	public void recibir(DatagramPacket paq) throws IOException {
+		ss.receive(paq);
 	}
 
 	public static void main(String ... args){
