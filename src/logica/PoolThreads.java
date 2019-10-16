@@ -25,20 +25,16 @@ public class PoolThreads
 	public String listarArchivos()
 	{
 		File directorio = new File("./data");
-		String retorno = "";
+		String retorno = "\n";
 		String[] nombres = directorio.list();
 		for(int i = 0; i < nombres.length; i++)
 		{
-//			if(i == nombres.length-1)
-			File f = new File(nombres[i]);
-			if(!f.isDirectory())
+			if(!nombres[i].equals("logs"))
 			{
-				retorno += (i+1) + ") " + nombres[i];
-				
-			}
-			else
 				retorno += (i+1) + ") " + nombres[i] + "\n";
+			}
 		}
+
 		return retorno;
 	}
 
