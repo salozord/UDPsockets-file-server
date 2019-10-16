@@ -102,23 +102,28 @@ public class PoolThreads
 					DatagramPacket p = new DatagramPacket(buf, buf.length);
 					ss.receive(p);
 					String recibida = new String(p.getData(), 0, p.getLength());
-					if(recibida.equals(Protocol.PREPARADO)) {
-						boolean aceptaArchs = seAceptan(true);
-						Protocol pro = new Protocol(aceptaArchs, archivo, this, p.getAddress(), p.getPort(), numeroSesiones);
-						referencias.put((p.getAddress().toString() + p.getPort()), pro);
-						executor.execute(pro);
-						numeroSesiones++;						
+					// Buscar el de todos que tiene el id o algo y hacer que se despierte del while o algo en el que se va a dejar
+					Protocol s = referencias.get((p.getAddress().toString() + p.getPort()));
+					if(s == null) {
+						if(recibida.equals(Protocol.PREPARADO)) {
+							boolean aceptaArchs = seAceptan(true);
+							Protocol pro = new Protocol(aceptaArchs, archivo, this, p.getAddress(), p.getPort(), numeroSesiones);
+							referencias.put((p.getAddress().toString() + p.getPort()), pro);
+							executor.execute(pro);
+							numeroSesiones++;						
+						}
+						else {
+							throw new Exception("Algo ocurrió y llegó un paquete que no decía PREPARADO (ya existe una referencia al cliente de donde llegó)");
+						}
 					}
-					else if(recibida.equals(Protocol.RECIBIDO) || recibida.equals(Protocol.ERROR)) {
-						// Buscar el de todos que tiene el id o algo y hacer que se despierte del while o algo en el que se va a dejar
-						Protocol s = referencias.get((p.getAddress().toString() + p.getPort()));
-						if(s != null) {
+					else {						
+						if(recibida.equals(Protocol.RECIBIDO) || recibida.equals(Protocol.ERROR)) {
 							s.setEstado(recibida);
 							referencias.remove((p.getAddress().toString() + p.getPort()));
 						}
 						else {
-							throw new Exception("Algo ocurrió y llegó un paquete de un cliente que no tiene delegado asignado!");
-						}
+							throw new Exception("Algo ocurrió y llegó un paquete de RECIBIDO o ERROR a un delegado que aún no existe");
+						}						
 					}
 				}
 				else

@@ -45,7 +45,7 @@ public class Protocol implements Runnable{
 	{
 		this.aceptaArchs = aceptaArchs;
 		this.archivo = new File(archivo);
-		this.pool = pool;
+		this.pool = poolThreads;
 		this.direccion = direccion;
 		this.puerto = puerto;
 		this.id = id;
@@ -101,7 +101,6 @@ public class Protocol implements Runnable{
 		try 
 		{
 
-			LocalTime ld = LocalTime.now();
 			escribirLog("Ingresó nuevo cliente con código " + id);
 			File archivoDeseado = archivo;
 			if(archivoDeseado != null) 
@@ -170,17 +169,11 @@ public class Protocol implements Runnable{
 				System.out.println("send");
 
 				//Recibe confirmación de recepción o error en el cliente
-				// FORMA 1: ASUMIENDO QUE LE PAQUETE LE LLEGA A ESTE Y NO AL POOL
-//				byte[] res = new byte[9];
-//				dp = new DatagramPacket(res, res.length);
-//				pool.recibir(dp);
-//				String ans = new String(dp.getData(), 0, dp.getLength());
 				
 				// FORMA 2: ASUMIENTO QUE LE LLEGAN AL POOL. ESTO ASUME QUE LOS PUERTOS PARA CADA CLIENTE SON ÚNICOS.
 				// ASUME QUE TENDRÁ UN NÚMERO DE CONEXIONES <= 25 al parecer de esta forma.
 				while(estado.equals("")) {Thread.yield();}
 				
-//				if(ans.equalsIgnoreCase(RECIBIDO)) 
 				if(estado.equalsIgnoreCase(RECIBIDO)) 
 				{
 					escribirLog("El cliente recibió el archivo CORRECTAMENTE e íntegramente :D !");
