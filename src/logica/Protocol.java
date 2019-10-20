@@ -111,8 +111,11 @@ public class Protocol implements Runnable{
 				escribirLog("Preparando para enviar nuevo archivo con nombre '" + archivoDeseado.getName() + "' . . .");
 				
 				header += archivoDeseado.getName();
+				
 				byte[] b = header.getBytes();
 				dp = new DatagramPacket(b, b.length, direccion, puerto);
+				System.out.println(new String(dp.getData(), 0, dp.getLength()));
+				
 				pool.enviar(dp);
 				escribirLog("Se enviÃ³ al cliente el nombre del archivo correctamente");
 				
@@ -129,8 +132,9 @@ public class Protocol implements Runnable{
 				escribirLog("Longitud del archivo a enviar: " + archivoDeseado.length() + " Bytes");
 				Long numPaquetes = (long) Math.ceil(((double)archivoDeseado.length())/TAMANIO_SEGMENTO);
 				escribirLog("La cantidad de paquetes a enviar, segÃºn un buffer de salida de " + TAMANIO_SEGMENTO + " Bytes, es de " + numPaquetes + " paquetes");
-				
+				System.out.println(numPaquetes);
 				// Se envÃ­a el nÃºmero de paquetes a enviar al cliente
+				
 				byte[] np =  (numPaquetes+"").getBytes();
 				dp = new DatagramPacket(np, np.length, direccion, puerto);
 				pool.enviar(dp);
@@ -142,16 +146,14 @@ public class Protocol implements Runnable{
 				long ini = System.currentTimeMillis();
 				// REVISAR SI SE CAMBIA LA CONDICION CON EL NUMERO DE PAQUETES O NO 
 				escribirLog("Iniciando envÃ­o del archivo seleccionado . . .");
-				while (sumaTam < archivoDeseado.length() && ( n = bis.read(mybytearray)) != 1) 
+				while (sumaTam < numPaquetes && ( n = bis.read(mybytearray)) != 1) 
 				{
 					dp = new DatagramPacket(mybytearray, 0, mybytearray.length, direccion, puerto);
 					pool.enviar(dp);
 					hash.update(mybytearray, 0, n);
-					sumaTam += n;
+					sumaTam ++;
 				}
-				mybytearray = new byte[0];
-				dp = new DatagramPacket(mybytearray, 0, mybytearray.length, direccion, puerto);
-				pool.enviar(dp);
+				System.out.println(sumaTam);
 				long fin = System.currentTimeMillis();
 				bis.close();
 				escribirLog("Archivo enviado completamente !");
@@ -165,6 +167,7 @@ public class Protocol implements Runnable{
 				
 				String hashRes = (FINARCH + SEPARADOR)+ DatatypeConverter.printHexBinary(fileHashed);
 				b = hashRes.getBytes();
+				
 				dp = new DatagramPacket(b, b.length, direccion, puerto);
 				pool.enviar(dp);
 				escribirLog("Hash del archivo enviado correctamente al cliente !");
