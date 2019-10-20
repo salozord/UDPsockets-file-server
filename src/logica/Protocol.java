@@ -101,7 +101,7 @@ public class Protocol implements Runnable{
 		try 
 		{
 
-			escribirLog("Ingresó nuevo cliente con código " + id);
+			escribirLog("IngresÃ³ nuevo cliente con cÃ³digo " + id);
 			File archivoDeseado = archivo;
 			if(archivoDeseado != null) 
 			{
@@ -114,7 +114,7 @@ public class Protocol implements Runnable{
 				byte[] b = header.getBytes();
 				dp = new DatagramPacket(b, b.length, direccion, puerto);
 				pool.enviar(dp);
-				escribirLog("Se envió al cliente el nombre del archivo correctamente");
+				escribirLog("Se enviÃ³ al cliente el nombre del archivo correctamente");
 				
 				byte[] mybytearray;
 				BufferedInputStream bis;
@@ -128,10 +128,10 @@ public class Protocol implements Runnable{
 				escribirLog("Calculando la cantidad de paquetes a enviar al cliente . . .");
 				escribirLog("Longitud del archivo a enviar: " + archivoDeseado.length() + " Bytes");
 				Long numPaquetes = (long) Math.ceil(((double)archivoDeseado.length())/TAMANIO_SEGMENTO);
-				escribirLog("La cantidad de paquetes a enviar, según un buffer de salida de " + TAMANIO_SEGMENTO + " Bytes, es de " + numPaquetes + " paquetes");
+				escribirLog("La cantidad de paquetes a enviar, segÃºn un buffer de salida de " + TAMANIO_SEGMENTO + " Bytes, es de " + numPaquetes + " paquetes");
 				
-				// Se envía el número de paquetes a enviar al cliente
-				byte[] np =  {numPaquetes.byteValue()};
+				// Se envÃ­a el nÃºmero de paquetes a enviar al cliente
+				byte[] np =  (numPaquetes+"").getBytes();
 				dp = new DatagramPacket(np, np.length, direccion, puerto);
 				pool.enviar(dp);
 				escribirLog("Mensaje con la cantidad de paquetes a enviar, enviado exitosamente !");
@@ -141,7 +141,7 @@ public class Protocol implements Runnable{
 				long sumaTam = 0;
 				long ini = System.currentTimeMillis();
 				// REVISAR SI SE CAMBIA LA CONDICION CON EL NUMERO DE PAQUETES O NO 
-				escribirLog("Iniciando envío del archivo seleccionado . . .");
+				escribirLog("Iniciando envÃ­o del archivo seleccionado . . .");
 				while (sumaTam < archivoDeseado.length() && ( n = bis.read(mybytearray)) != 1) 
 				{
 					dp = new DatagramPacket(mybytearray, 0, mybytearray.length, direccion, puerto);
@@ -149,14 +149,17 @@ public class Protocol implements Runnable{
 					hash.update(mybytearray, 0, n);
 					sumaTam += n;
 				}
+				mybytearray = new byte[0];
+				dp = new DatagramPacket(mybytearray, 0, mybytearray.length, direccion, puerto);
+				pool.enviar(dp);
 				long fin = System.currentTimeMillis();
 				bis.close();
 				escribirLog("Archivo enviado completamente !");
 				long tiempo = (fin - ini)/1000;
-				escribirLog("Tiempo total de envío del archivo --> " + tiempo + " segundos");
+				escribirLog("Tiempo total de envÃ­o del archivo --> " + tiempo + " segundos");
 				
-				// Comprobación de la integridad con hashing
-				escribirLog("Iniciando la comprobación de la integridad . . .");
+				// ComprobaciÃ³n de la integridad con hashing
+				escribirLog("Iniciando la comprobaciÃ³n de la integridad . . .");
 				byte[] fileHashed = hash.digest();
 				escribirLog("Hash calculado para el archivo enviado --> " + DatatypeConverter.printHexBinary(fileHashed));
 				
@@ -168,35 +171,35 @@ public class Protocol implements Runnable{
 				
 				System.out.println("send");
 
-				//Recibe confirmación de recepción o error en el cliente
+				//Recibe confirmaciÃ³n de recepciÃ³n o error en el cliente
 				
-				// FORMA 2: ASUMIENTO QUE LE LLEGAN AL POOL. ESTO ASUME QUE LOS PUERTOS PARA CADA CLIENTE SON ÚNICOS.
-				// ASUME QUE TENDRÁ UN NÚMERO DE CONEXIONES <= 25 al parecer de esta forma.
+				// FORMA 2: ASUMIENTO QUE LE LLEGAN AL POOL. ESTO ASUME QUE LOS PUERTOS PARA CADA CLIENTE SON ÃšNICOS.
+				// ASUME QUE TENDRÃ� UN NÃšMERO DE CONEXIONES <= 25 al parecer de esta forma.
 				while(estado.equals("")) {Thread.yield();}
 				
 				if(estado.equalsIgnoreCase(RECIBIDO)) 
 				{
-					escribirLog("El cliente recibió el archivo CORRECTAMENTE e íntegramente :D !");
-					escribirLog("Finalizando conexión éxitosamente ! . . .");
+					escribirLog("El cliente recibiÃ³ el archivo CORRECTAMENTE e Ã­ntegramente :D !");
+					escribirLog("Finalizando conexiÃ³n Ã©xitosamente ! . . .");
 					fw.close();
 				}
 				else 
 				{
-					escribirLog("El cliente encontró un ERROR en la integridad del archivo :(");
-					escribirLog("Finalizando conexión . . .");
+					escribirLog("El cliente encontrÃ³ un ERROR en la integridad del archivo :(");
+					escribirLog("Finalizando conexiÃ³n . . .");
 					fw.close();
 				}
 			}
 			else 
 			{
 				escribirLog("El archivo a enviar no existe :(");
-				escribirLog("Finalizando conexión . . .");
+				escribirLog("Finalizando conexiÃ³n . . .");
 				fw.close();
 			}
 		}
 		catch (Exception e) {
-			escribirLog("Error encontrado durante la ejecución: " + e.getMessage());
-			escribirLog("Finalizando conexión . . .");
+			escribirLog("Error encontrado durante la ejecuciÃ³n: " + e.getMessage());
+			escribirLog("Finalizando conexiÃ³n . . .");
 			fw.close();
 			e.printStackTrace();
 		} 
